@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { signIn, getSession } from "next-auth/react";
+import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GetServerSideProps } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-export default function SignUpPage() {
-  const [name, setName] = useState("");
+export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +22,6 @@ export default function SignUpPage() {
 
     try {
       const result = await signIn("credentials", {
-        name,
         email,
         password,
         redirect: false
@@ -28,12 +29,11 @@ export default function SignUpPage() {
 
       if (result?.ok) {
         router.push("/");
-        router.refresh();
       } else {
-        console.error("Sign up failed");
+        console.error("Sign in failed");
       }
     } catch (error) {
-      console.error("Sign up error:", error);
+      console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -43,23 +43,11 @@ export default function SignUpPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Sign Up</h1>
-          <p className="text-gray-600">Create your Discord Clone account</p>
+          <h1 className="text-2xl font-bold">Sign In</h1>
+          <p className="text-gray-600">Welcome back to Discord Clone</p>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              disabled={isLoading}
-            />
-          </div>
-          
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -81,20 +69,19 @@ export default function SignUpPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isLoading}
-              minLength={6}
             />
           </div>
           
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Sign Up"}
+            {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
         
         <div className="text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{" "}
-            <a href="/sign-in" className="text-blue-600 hover:underline">
-              Sign in
+            Don't have an account?{" "}
+            <a href="/sign-up" className="text-blue-600 hover:underline">
+              Sign up
             </a>
           </p>
         </div>
@@ -102,3 +89,20 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  if (session) {
+    return {
+      redirect: {
+        destination: "/",
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};

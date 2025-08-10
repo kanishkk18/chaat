@@ -1,10 +1,8 @@
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import React from "react";
-import { redirect } from "next/navigation";
 import { ChannelType, MemberRole } from "@prisma/client";
 import { Hash, Mic, ShieldAlert, ShieldCheck, Video } from "lucide-react";
-
-import { currentProfile } from "@/lib/current-profile";
-import { db } from "@/lib/db";
 
 import { ServerHeader } from "@/components/server/server-header";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,31 +26,39 @@ const roleIconMap = {
   [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-rose-500" />
 };
 
-export async function ServerSidebar({ serverId }: { serverId: string }) {
-  const profile = await currentProfile();
+export function ServerSidebar({ serverId }: { serverId: string }) {
+  const { data: session } = useSession();
+  const [server, setServer] = useState<any>(null);
+  const [role, setRole] = useState<MemberRole | undefined>();
+  const [loading, setLoading] = useState(true);
 
-  if (!profile) return redirect("/");
-
-  const server = await db.server.findUnique({
-    where: {
-      id: serverId
-    },
-    include: {
-      channels: {
-        orderBy: {
-          createdAt: "asc"
-        }
-      },
-      members: {
-        include: {
-          profile: true
-        },
-        orderBy: {
-          role: "asc"
-        }
+  useEffect(() => {
+    const fetchServerData = async () => {
+      if (!session?.user?.id) {
+        setLoading(false);
+        return;
       }
-    }
-  });
+
+      try {
+        const response = await fetch(`/api/servers/${serverId}/data`);
+        if (response.ok) {
+          const data = await response.json();
+          setServer(data.server);
+          setRole(data.role);
+        }
+      } catch (error) {
+        console.error('Failed to fetch server data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServerData();
+  }, [serverId, session]);
+
+  if (!session?.user) return null;
+  if (loading) return <div>Loading...</div>;
+  if (!server) return null;
 
   const textChannels = server?.channels.filter(
     (channel) => channel.type === ChannelType.TEXT
@@ -65,14 +71,8 @@ export async function ServerSidebar({ serverId }: { serverId: string }) {
   );
 
   const members = server?.members.filter(
-    (member) => member.profileId !== profile.id
+    (member) => member.profileId !== session.user.id
   );
-
-  if (!server) return redirect("/");
-
-  const role = server.members.find(
-    (member) => member.profileId === profile.id
-  )?.role;
 
   return (
     <div className="flex flex-col h-full text-primary w-full dark:bg-[#2b2d31] bg-[#f2f3f5]">
