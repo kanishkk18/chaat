@@ -49,11 +49,15 @@ export function InitialModal() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.post("/api/servers", values);
+      const response = await axios.post("/api/servers", values);
 
       form.reset();
-      router.refresh();
-      window.location.reload();
+      if (response.data?.id) {
+        router.push(`/servers/${response.data.id}`);
+      } else {
+        router.refresh();
+        window.location.reload();
+      }
     } catch (error) {
       console.error(error);
     }

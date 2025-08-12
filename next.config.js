@@ -9,7 +9,7 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: ["uploadthing.com"]
+    domains: ["uploadthing.com", "api.dicebear.com"]
   },
   swcMinify: false
 };
